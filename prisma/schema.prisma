@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Application {
+  id            String     @id
+  firstName     String
+  lastName      String
+  email         String
+  phone         String
+  dob           String
+  idType        String
+  unit          String
+  monthlyRent   Float
+  monthlyIncome Float
+  moveIn        String
+  status        String     @default("processing")
+  aiAnalysis    String?
+  submittedAt   DateTime   @default(now())
+  decidedBy     String?
+  decidedAt     DateTime?
+  decisionNotes String?
+  documents     Document[]
+}
+
+model Document {
+  id            Int         @id @default(autoincrement())
+  applicationId String
+  type          String
+  filename      String
+  status        String      @default("uploaded")
+  uploadedAt    DateTime    @default(now())
+  application   Application @relation(fields: [applicationId], references: [id])
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String
+  initials  String
+  color     String
+  createdAt DateTime @default(now())
+}
+
+model Property {
+  id          Int      @id @default(autoincrement())
+  unit        String   @unique
+  type        String   // Studio, 1-Bedroom, 2-Bedroom, 3-Bedroom
+  floor       Int
+  monthlyRent Float
+  available   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
