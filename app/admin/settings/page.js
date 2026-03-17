@@ -19,6 +19,9 @@ function Sidebar({ role }) {
       <Link href="/admin/dashboard?filter=review" className="sidebar-item">
         <span>⚠️</span> Review Queue
       </Link>
+      <Link href="/admin/analytics" className="sidebar-item">
+        <span>📈</span> Analytics
+      </Link>
       <Link href="/admin/dashboard?filter=approved" className="sidebar-item">
         <span>✅</span> Approved
       </Link>

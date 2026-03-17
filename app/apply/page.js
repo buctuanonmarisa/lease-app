@@ -31,6 +31,15 @@ function validatePhone(val) {
   return '';
 }
 
+function validateBirth(val) {
+  if (!val || val.trim() === '') return 'This field is required.';
+  const birthDate = new Date(val);
+  const today = new Date();
+  const age = today.getFullYear() - birthDate.getFullYear();
+  if (age < 0 || age > 150) return 'Enter a valid birth date.';
+  return '';
+}
+
 function validateIncome(val) {
   if (!val || val.trim() === '') return 'This field is required.';
   if (isNaN(Number(val)) || Number(val) <= 0) return 'Enter a valid monthly income.';
@@ -93,7 +102,7 @@ export default function ApplyPage() {
     e.lastName = required(form.lastName);
     e.email = validateEmail(form.email);
     e.phone = validatePhone(form.phone);
-    e.dob = required(form.dob);
+    e.dob = validateBirth(form.dob);
     e.idType = required(form.idType);
     e.unit = required(form.unit);
     e.moveIn = required(form.moveIn);

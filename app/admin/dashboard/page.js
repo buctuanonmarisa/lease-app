@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import TopNav from '@/components/layout/TopNav';
 import Badge from '@/components/ui/Badge';
+import StatCard from '@/components/ui/StatCard';
 
 const STATUS_LABEL = {
   processing: '🤖 Processing',
@@ -24,6 +25,9 @@ function Sidebar({ role, reviewCount }) {
       <Link href="/admin/dashboard?filter=review" className="sidebar-item">
         <span>⚠️</span> Review Queue
         {reviewCount > 0 && <span className="count-badge">{reviewCount}</span>}
+      </Link>
+      <Link href="/admin/analytics" className="sidebar-item">
+        <span>📈</span> Analytics
       </Link>
       <Link href="/admin/dashboard?filter=approved" className="sidebar-item">
         <span>✅</span> Approved
@@ -86,7 +90,43 @@ export default function DashboardPage() {
     const needsReview = apps.filter((a) => a.status === 'review' || a.status === 'mismatch').length;
     const approved = apps.filter((a) => a.status === 'approved').length;
     const rejected = apps.filter((a) => a.status === 'rejected').length;
-    return { total, needsReview, approved, rejected };
+
+    // Avg days from submission to decision (only decided apps)
+    const decided = apps.filter((a) => a.decidedAt);
+    const avgDays =
+      decided.length > 0
+        ? decided.reduce((sum, a) => {
+            const ms = new Date(a.decidedAt) - new Date(a.submittedAt);
+            return sum + ms / (1000 * 60 * 60 * 24);
+          }, 0) / decided.length
+        : null;
+
+    // Approval rate among decided apps
+    const approvalRate =
+      approved + rejected > 0
+        ? Math.round((approved / (approved + rejected)) * 100)
+        : null;
+
+    // Most applied-for unit
+    const unitCounts = {};
+    apps.forEach((a) => {
+      if (a.unit) unitCounts[a.unit] = (unitCounts[a.unit] || 0) + 1;
+    });
+    const topUnit = Object.entries(unitCounts).sort((a, b) => b[1] - a[1])[0] ?? null;
+
+    // Most popular rent range
+    const rentBuckets = { '₱0–10k': 0, '₱10–15k': 0, '₱15–20k': 0, '₱20k+': 0 };
+    apps.forEach((a) => {
+      const r = a.monthlyRent;
+      if (!r) return;
+      if (r < 10000) rentBuckets['₱0–10k']++;
+      else if (r < 15000) rentBuckets['₱10–15k']++;
+      else if (r < 20000) rentBuckets['₱15–20k']++;
+      else rentBuckets['₱20k+']++;
+    });
+    const topRent = Object.entries(rentBuckets).sort((a, b) => b[1] - a[1])[0] ?? null;
+
+    return { total, needsReview, approved, rejected, avgDays, approvalRate, topUnit, topRent };
   }, [apps]);
 
   const reviewCount = stats.needsReview;
@@ -134,27 +174,66 @@ export default function DashboardPage() {
 
           {/* Stats */}
           <div className="stat-row">
+            <StatCard value={String(stats.total)} label="Total Apps" />
+            <StatCard value={String(stats.needsReview)} label="Needs Review" color="var(--accent)" />
+            <StatCard value={String(stats.approved)} label="Approved" color="var(--green)" />
+            <StatCard value={String(stats.rejected)} label="Rejected" color="var(--red)" />
+          </div>
+
+          {/* Insights Row */}
+          <div className="stat-row">
             <div className="stat-box">
-              <div className="stat-num">{stats.total}</div>
-              <div className="stat-label">Total Applications</div>
+              <div className="stat-num" style={{ fontSize: 22 }}>
+                {stats.avgDays != null ? `${stats.avgDays.toFixed(1)}d` : '—'}
+              </div>
+              <div className="stat-label">Avg. Decision Time</div>
+              <div style={{ fontSize: 8, color: 'var(--muted)', marginTop: 3 }}>
+                submission → decision
+              </div>
             </div>
             <div className="stat-box">
-              <div className="stat-num" style={{ color: 'var(--accent)' }}>
-                {stats.needsReview}
+              <div
+                className="stat-num"
+                style={{
+                  fontSize: 22,
+                  color:
+                    stats.approvalRate != null
+                      ? stats.approvalRate >= 60
+                        ? '#10b981'
+                        : stats.approvalRate >= 40
+                        ? '#ca8a04'
+                        : 'var(--red)'
+                      : undefined,
+                }}
+              >
+                {stats.approvalRate != null ? `${stats.approvalRate}%` : '—'}
               </div>
-              <div className="stat-label">Needs Review</div>
+              <div className="stat-label">Approval Rate</div>
+              <div style={{ fontSize: 8, color: 'var(--muted)', marginTop: 3 }}>
+                of decided applications
+              </div>
             </div>
             <div className="stat-box">
-              <div className="stat-num" style={{ color: 'var(--green)' }}>
-                {stats.approved}
+              <div className="stat-num" style={{ fontSize: 18 }}>
+                {stats.topUnit ? stats.topUnit[0] : '—'}
               </div>
-              <div className="stat-label">Approved</div>
+              <div className="stat-label">Most Applied Unit</div>
+              <div style={{ fontSize: 8, color: 'var(--muted)', marginTop: 3 }}>
+                {stats.topUnit
+                  ? `${stats.topUnit[1]} application${stats.topUnit[1] !== 1 ? 's' : ''}`
+                  : 'no data'}
+              </div>
             </div>
             <div className="stat-box">
-              <div className="stat-num" style={{ color: 'var(--red)' }}>
-                {stats.rejected}
+              <div className="stat-num" style={{ fontSize: 18 }}>
+                {stats.topRent ? stats.topRent[0] : '—'}
               </div>
-              <div className="stat-label">Rejected</div>
+              <div className="stat-label">Top Rent Range</div>
+              <div style={{ fontSize: 8, color: 'var(--muted)', marginTop: 3 }}>
+                {stats.topRent
+                  ? `${stats.topRent[1]} application${stats.topRent[1] !== 1 ? 's' : ''}`
+                  : 'no data'}
+              </div>
             </div>
           </div>
 
